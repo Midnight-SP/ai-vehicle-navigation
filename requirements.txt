@@ -1,0 +1,8 @@
+numpy
+pandas
+tensorflow
+keras
+gym
+matplotlib
+scikit-learn
+jsonschema
