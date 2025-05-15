@@ -42,12 +42,13 @@ class VehicleAgent:
         plt.close()
 
     def act(self, state, epsilon=0.1):
-        if np.random.rand() < epsilon:  # Explore with probability epsilon
-            action = np.random.choice(5)  # Random action
-        else:
-            action_probabilities = self.model.predict(np.expand_dims(state, axis=0))
-            action = np.argmax(action_probabilities)
-        return action
+        # Jeśli eksploracja, wybierz losową akcję
+        if np.random.rand() < epsilon:
+            return np.random.choice(self.environment.action_space.n)
+
+        # Wykorzystaj model sieci neuronowej do przewidywania akcji
+        q_values = self.model.predict(np.expand_dims(state, axis=0))
+        return np.argmax(q_values[0])  # Wybierz akcję z najwyższą wartością Q
 
     def evaluate(self, test_episodes):
         total_reward = 0

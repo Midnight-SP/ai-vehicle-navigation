@@ -13,13 +13,14 @@ class GeneticAlgorithm:
         self.generation_stats = []  # Store fitness stats for each generation
 
     def initialize_population(self):
-        # Create initial population with random parameters and neural networks
         population = []
         for _ in range(self.population_size):
             individual = {
-                "speed": np.random.uniform(0.5, 2.0),  # Random speed multiplier
-                "turn_angle": np.random.uniform(10, 45),  # Random max turn angle
-                "model": self.create_random_model()
+                "speed": np.random.uniform(1.0, 3.0),  # Maksymalna prędkość
+                "acceleration": np.random.uniform(0.05, 0.2),  # Przyspieszenie
+                "braking_force": np.random.uniform(0.1, 0.3),  # Siła hamowania
+                "turn_angle": np.random.uniform(10, 45),  # Maksymalny kąt skrętu
+                "model": self.create_random_model()  # Model decyzyjny
             }
             population.append(individual)
         return population
@@ -46,8 +47,10 @@ class GeneticAlgorithm:
             model = self.create_random_model()
             model.set_weights([np.array(w) for w in individual_data["model_weights"]])
             self.population.append({
-                "speed": individual_data["speed"],
-                "turn_angle": individual_data["turn_angle"],
+                "speed": individual_data.get("speed", np.random.uniform(1.0, 3.0)),
+                "turn_angle": individual_data.get("turn_angle", np.random.uniform(10, 45)),
+                "acceleration": individual_data.get("acceleration", np.random.uniform(0.05, 0.2)),
+                "braking_force": individual_data.get("braking_force", np.random.uniform(0.1, 0.3)),
                 "model": model
             })
         print(f"Population loaded from {file_path}")
@@ -93,9 +96,10 @@ class GeneticAlgorithm:
         return [self.population[parents_indices[0]], self.population[parents_indices[1]]]
 
     def crossover(self, parent1, parent2):
-        # Create a child by averaging parameters and mixing model weights
         child = {
             "speed": np.mean([parent1["speed"], parent2["speed"]]),
+            "acceleration": np.mean([parent1["acceleration"], parent2["acceleration"]]),
+            "braking_force": np.mean([parent1["braking_force"], parent2["braking_force"]]),
             "turn_angle": np.mean([parent1["turn_angle"], parent2["turn_angle"]]),
             "model": self.crossover_models(parent1["model"], parent2["model"])
         }
@@ -111,26 +115,25 @@ class GeneticAlgorithm:
         return child_model
 
     def mutate(self, individual):
-        # Mutate parameters with a small probability
         if np.random.rand() < self.mutation_rate:
             individual["speed"] += np.random.uniform(-0.1, 0.1)
-            individual["speed"] = np.clip(individual["speed"], 0.5, 2.0)
+            individual["speed"] = np.clip(individual["speed"], 1.0, 3.0)
         if np.random.rand() < self.mutation_rate:
-            individual["turn_angle"] += np.random.uniform(-5, 5)
+            individual["acceleration"] += np.random.uniform(-0.01, 0.01)
+            individual["acceleration"] = np.clip(individual["acceleration"], 0.05, 0.2)
+        if np.random.rand() < self.mutation_rate:
+            individual["braking_force"] += np.random.uniform(-0.02, 0.02)
+            individual["braking_force"] = np.clip(individual["braking_force"], 0.1, 0.3)
+        if np.random.rand() < self.mutation_rate:
+            individual["turn_angle"] += np.random.uniform(-2, 2)
             individual["turn_angle"] = np.clip(individual["turn_angle"], 10, 45)
 
-        # Mutate model weights with a small probability
-        if np.random.rand() < self.mutation_rate:
-            weights = individual["model"].get_weights()
-            new_weights = [w + np.random.normal(0, 0.1, w.shape) for w in weights]
-            individual["model"].set_weights(new_weights)
-
     def evolve(self, fitness_scores):
-        # Sort population by fitness scores (descending)
+        # Sortuj populację według wyników fitness (malejąco)
         sorted_indices = np.argsort(fitness_scores)[::-1]
-        best_individual = self.population[sorted_indices[0]]  # Best individual
+        best_individual = self.population[sorted_indices[0]]  # Najlepszy osobnik
 
-        # Record stats for the current generation
+        # Zachowaj statystyki generacji
         best_fitness = fitness_scores[sorted_indices[0]]
         worst_fitness = fitness_scores[sorted_indices[-1]]
         avg_fitness = np.mean(fitness_scores)
@@ -140,8 +143,8 @@ class GeneticAlgorithm:
             "average": avg_fitness
         })
 
-        # Create the next generation
-        new_population = [best_individual]  # Start with the best individual (elitism)
+        # Tworzenie nowej populacji
+        new_population = [best_individual]  # Dodaj najlepszego osobnika do nowej populacji (elitism)
         while len(new_population) < self.population_size:
             parent1, parent2 = self.select_parents(fitness_scores)
             child = self.crossover(parent1, parent2)

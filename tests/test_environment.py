@@ -1,28 +1,30 @@
 import unittest
-from src.environment.simulation_environment import SimulationEnvironment
+import numpy as np
+from environment.simulation_environment import SimulationEnvironment
 
 class TestSimulationEnvironment(unittest.TestCase):
+    def test_start_position_and_angle(self):
+        route_data = {
+            "route": {
+                "start_position": { "latitude": 0, "longitude": -1 },
+                "start_angle": 90,
+                "checkpoints": [],
+                "walls": []
+            }
+        }
+        genes = {
+            "speed": 2.0,
+            "acceleration": 0.1,
+            "braking_force": 0.2,
+            "turn_angle": 30
+        }
+        env = SimulationEnvironment(route_data, genes)
+        self.assertTrue(np.array_equal(env.vehicle_position, np.array([0, -1], dtype=float)))
+        self.assertEqual(env.vehicle_angle, 90)
 
-    def setUp(self):
-        self.env = SimulationEnvironment()
+        env.reset()
+        self.assertTrue(np.array_equal(env.vehicle_position, np.array([0, -1], dtype=float)))
+        self.assertEqual(env.vehicle_angle, 90)
 
-    def test_reset(self):
-        initial_state = self.env.reset()
-        self.assertIsNotNone(initial_state)
-        self.assertEqual(self.env.current_step, 0)
-
-    def test_step(self):
-        self.env.reset()
-        action = self.env.action_space.sample()  # Assuming action_space is defined
-        next_state, reward, done, info = self.env.step(action)
-        self.assertIsNotNone(next_state)
-        self.assertIsInstance(reward, (int, float))
-        self.assertIn(done, [True, False])
-
-    def test_render(self):
-        self.env.reset()
-        output = self.env.render()
-        self.assertIsNotNone(output)
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

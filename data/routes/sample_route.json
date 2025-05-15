@@ -1,19 +1,19 @@
 {
   "route": {
-    "name": "Sample Route",
-    "description": "A simple route with checkpoints and walls.",
-    "points": [
-      { "id": 1, "coordinates": { "latitude": 0, "longitude": 0 }, "description": "Start Point" },
-      { "id": 2, "coordinates": { "latitude": 5, "longitude": 0 }, "description": "Checkpoint 1" },
-      { "id": 3, "coordinates": { "latitude": 10, "longitude": 0 }, "description": "End Point" }
-    ],
-    "connections": [
-      { "from": 1, "to": 2, "distance": 5 },
-      { "from": 2, "to": 3, "distance": 5 }
+    "name": "Sample Route with Turn",
+    "description": "A route with a turn and wider walls.",
+    "start_position": { "latitude": 0, "longitude": 0 },
+    "start_angle": -90,
+    "checkpoints": [
+      { "start": { "latitude": -2, "longitude": -3 }, "end": { "latitude": 2, "longitude": -3 } },
+      { "start": { "latitude": -2, "longitude": -12 }, "end": { "latitude": 2, "longitude": -7 } },
+      { "start": { "latitude": 10, "longitude": -12 }, "end": { "latitude": 10, "longitude": -7 } }
     ],
     "walls": [
-      { "start": { "latitude": 0, "longitude": -1 }, "end": { "latitude": 10, "longitude": -1 } },
-      { "start": { "latitude": 0, "longitude": 1 }, "end": { "latitude": 10, "longitude": 1 } }
+      { "start": { "latitude": -2, "longitude": 0 }, "end": { "latitude": -2, "longitude": -12 } },
+      { "start": { "latitude": -2, "longitude": -12 }, "end": { "latitude": 10, "longitude": -12 } },
+      { "start": { "latitude": 2, "longitude": 0 }, "end": { "latitude": 2, "longitude": -7 } },
+      { "start": { "latitude": 2, "longitude": -7 }, "end": { "latitude": 10, "longitude": -7 } }
     ]
   }
 }
