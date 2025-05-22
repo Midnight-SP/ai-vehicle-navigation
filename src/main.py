@@ -61,20 +61,19 @@ def visualize_route(route_data):
     plt.savefig("route.png")
     plt.close()  # Zamknij wykres, aby zwolnić pamięć
 
-def visualize_best_vehicle_path(route_data, best_vehicle, environment):
-    # Resetuj środowisko do początkowego stanu
+def visualize_best_vehicle_path(route_data, best_vehicle, environment, generation):
     state = environment.reset()
     done = False
-    positions = [environment.vehicle_position.copy()]  # Śledzenie pozycji pojazdu
+    vehicle_corners_history = []
 
-    # Symuluj ruch najlepszego pojazdu
     while not done:
         action = best_vehicle["model"].predict(np.expand_dims(state, axis=0)).argmax()
         state, _, done, _ = environment.step(action)
-        positions.append(environment.vehicle_position.copy())
-        print(f"Vehicle position: {environment.vehicle_position}")  # Log pozycji pojazdu
+        # Zapisz wierzchołki prostokąta pojazdu
+        vehicle_corners_history.append(environment.get_vehicle_corners())
 
-    # Rysowanie trasy
+    positions = np.array(environment.path)
+
     plt.figure(figsize=(10, 6))
 
     # Rysowanie ścian
@@ -108,17 +107,20 @@ def visualize_best_vehicle_path(route_data, best_vehicle, environment):
     positions = np.array(positions)
     plt.plot(positions[:, 1], positions[:, 0], color='green', label='Best Vehicle Path')
 
-    # Ustawienia wykresu
+    # Rysowanie prostokąta pojazdu na każdym kroku
+    for corners in vehicle_corners_history:
+        xs = np.append(corners[:, 1], corners[0, 1])
+        ys = np.append(corners[:, 0], corners[0, 0])
+        plt.plot(xs, ys, color='orange', alpha=0.3)
+
     plt.xlabel('Longitude')
     plt.ylabel('Latitude')
-    plt.title('Best Vehicle Path')
+    plt.title(f'Best Vehicle Path - Generation {generation}')
     plt.legend()
     plt.grid()
-    plt.axis('equal')  # Zachowanie proporcji osi
-
-    # Zapisz wykres do pliku
-    plt.savefig("best_vehicle_path.png")
-    plt.close()  # Zamknij wykres, aby zwolnić pamięć
+    plt.axis('equal')
+    plt.savefig(f"best_vehicle_path_gen_{generation}.png")
+    plt.close()
 
 def main():
     route_data = load_route('data/routes/sample_route.json')
@@ -162,7 +164,7 @@ def main():
         save_best_vehicle_path(environment.path, generation + 1)
 
         # Wizualizacja trasy najlepszego pojazdu
-        visualize_best_vehicle_path(route_data, best_vehicle, environment)
+        visualize_best_vehicle_path(route_data, best_vehicle, environment, generation+1)
 
         # Ewolucja populacji
         ga.evolve(fitness_scores)

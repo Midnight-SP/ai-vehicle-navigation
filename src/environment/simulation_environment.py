@@ -13,6 +13,8 @@ class SimulationEnvironment:
         self.current_checkpoint = 0
         self.done = False
         self.sensors = [0] * 8
+        self.vehicle_length = 1.5  # długość pojazdu
+        self.vehicle_width = 1.0   # szerokość pojazdu
         self.vehicle_position = self.start_position.copy()
         self.vehicle_angle = self.start_angle
         self.velocity = 0.0
@@ -53,7 +55,7 @@ class SimulationEnvironment:
         self.vehicle_angle = self.start_angle
         self.velocity = 0.0
         self.time_elapsed = 0
-        self.path = [self.vehicle_position.copy()]  # Resetuj ścieżkę
+        self.path = [self.vehicle_position.copy()]  # Resetuj ścieżkę na starcie
         self.update_sensors()
         return self.get_state_features()
 
@@ -74,8 +76,13 @@ class SimulationEnvironment:
         # Aktualizuj pozycję pojazdu
         movement_vector = self.get_movement_vector(self.velocity)
         self.vehicle_position += movement_vector
-        self.path.append(self.vehicle_position.copy())  # Dodaj pozycję do ścieżki
-        print(f"Updated vehicle position: {self.vehicle_position}")  # Log pozycji pojazdu
+        self.path.append(self.vehicle_position.copy())
+
+        # Sprawdź kolizję
+        if self.check_collision():
+            self.done = True
+            reward = -100  # kara za kolizję
+            return self.get_state_features(), reward, self.done, {}
 
         # Aktualizuj sensory
         self.update_sensors()
@@ -91,6 +98,50 @@ class SimulationEnvironment:
         # Oblicz nagrodę
         reward = self.calculate_reward(checkpoint_crossed)
         return self.get_state_features(), reward, self.done, {}
+    
+    def get_vehicle_corners(self):
+        cx, cy = self.vehicle_position
+        angle_rad = np.radians(self.vehicle_angle)
+        l = self.vehicle_length / 2
+        w = self.vehicle_width / 2
+
+        # Wierzchołki w lokalnym układzie pojazdu (środek pojazdu to (0,0))
+        corners = np.array([
+            [ l,  w],
+            [ l, -w],
+            [-l, -w],
+            [-l,  w]
+        ])
+
+        # Obrót i przesunięcie do globalnego układu
+        rotation = np.array([
+            [np.cos(angle_rad), -np.sin(angle_rad)],
+            [np.sin(angle_rad),  np.cos(angle_rad)]
+        ])
+        rotated = corners @ rotation.T
+        global_corners = rotated + np.array([cx, cy])
+        return global_corners
+    
+    def check_collision(self):
+        corners = self.get_vehicle_corners()
+        # Boki pojazdu jako odcinki
+        vehicle_edges = [
+            (corners[i], corners[(i+1)%4]) for i in range(4)
+        ]
+        for wall in self.walls:
+            wall_start = np.array(wall[0])
+            wall_end = np.array(wall[1])
+            for edge_start, edge_end in vehicle_edges:
+                if self.segments_intersect(edge_start, edge_end, wall_start, wall_end):
+                    return True
+        return False
+
+    @staticmethod
+    def segments_intersect(p1, p2, q1, q2):
+        # Pomocnicza funkcja do sprawdzania przecięcia dwóch odcinków
+        def ccw(a, b, c):
+            return (c[1]-a[1]) * (b[0]-a[0]) > (b[1]-a[1]) * (c[0]-a[0])
+        return (ccw(p1, q1, q2) != ccw(p2, q1, q2)) and (ccw(p1, p2, q1) != ccw(p1, p2, q2))
 
     def get_movement_vector(self, speed):
         # Calculate movement vector based on the current angle
@@ -149,9 +200,8 @@ class SimulationEnvironment:
         reward = -1
         if checkpoint_crossed:
             reward += 50
-            print("Checkpoint crossed! Reward: 50")
         else:
-            print("No checkpoint crossed. Penalty: -1")
+            reward -= 1
 
         # Encourage acceleration
         if self.velocity > 0:
@@ -175,25 +225,24 @@ class SimulationEnvironment:
         
     def check_checkpoint_crossed(self):
         if self.current_checkpoint >= len(self.checkpoints):
-            print("No more checkpoints to cross.")
             return False
-
         checkpoint_start, checkpoint_end = self.checkpoints[self.current_checkpoint]
-        vehicle_pos = self.vehicle_position
-
-        checkpoint_vector = np.array(checkpoint_end) - np.array(checkpoint_start)
-        vehicle_vector = vehicle_pos - np.array(checkpoint_start)
-        cross_product = np.cross(checkpoint_vector, vehicle_vector)
-
-        print(f"Vehicle position: {vehicle_pos}, Checkpoint: {checkpoint_start} -> {checkpoint_end}, Cross product: {cross_product}")
-
-        if cross_product > 0:
-            print(f"Checkpoint {self.current_checkpoint} crossed.")
-            self.current_checkpoint += 1
-            self.time_elapsed = 0
-            if self.current_checkpoint == len(self.checkpoints):
-                self.done = True
-            return True
+        checkpoint_start = np.array(checkpoint_start)
+        checkpoint_end = np.array(checkpoint_end)
+        corners = self.get_vehicle_corners()
+        for corner in corners:
+            # Sprawdź, czy corner leży na odcinku checkpointu (z tolerancją)
+            v1 = checkpoint_end - checkpoint_start
+            v2 = corner - checkpoint_start
+            cross = np.cross(v1, v2)
+            if abs(cross) < 1e-6:  # prawie współliniowe
+                dot = np.dot(v1, v2)
+                if 0 <= dot <= np.dot(v1, v1):
+                    self.current_checkpoint += 1
+                    self.time_elapsed = 0
+                    if self.current_checkpoint == len(self.checkpoints):
+                        self.done = True
+                    return True
         return False
 
     def check_done(self):

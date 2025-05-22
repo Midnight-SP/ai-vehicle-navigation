@@ -16,9 +16,9 @@ class GeneticAlgorithm:
         population = []
         for _ in range(self.population_size):
             individual = {
-                "speed": np.random.uniform(1.0, 3.0),  # Maksymalna prędkość
-                "acceleration": np.random.uniform(0.05, 0.2),  # Przyspieszenie
-                "braking_force": np.random.uniform(0.1, 0.3),  # Siła hamowania
+                "speed": np.random.uniform(3.0, 30.0),  # Maksymalna prędkość
+                "acceleration": np.random.uniform(0.05, 0.35),  # Przyspieszenie
+                "braking_force": np.random.uniform(0.1, 0.5),  # Siła hamowania
                 "turn_angle": np.random.uniform(10, 45),  # Maksymalny kąt skrętu
                 "model": self.create_random_model()  # Model decyzyjny
             }
@@ -47,10 +47,10 @@ class GeneticAlgorithm:
             model = self.create_random_model()
             model.set_weights([np.array(w) for w in individual_data["model_weights"]])
             self.population.append({
-                "speed": individual_data.get("speed", np.random.uniform(1.0, 3.0)),
+                "speed": individual_data.get("speed", np.random.uniform(3.0, 30.0)),
                 "turn_angle": individual_data.get("turn_angle", np.random.uniform(10, 45)),
-                "acceleration": individual_data.get("acceleration", np.random.uniform(0.05, 0.2)),
-                "braking_force": individual_data.get("braking_force", np.random.uniform(0.1, 0.3)),
+                "acceleration": individual_data.get("acceleration", np.random.uniform(0.05, 0.35)),
+                "braking_force": individual_data.get("braking_force", np.random.uniform(0.1, 0.5)),
                 "model": model
             })
         print(f"Population loaded from {file_path}")
@@ -116,14 +116,14 @@ class GeneticAlgorithm:
 
     def mutate(self, individual):
         if np.random.rand() < self.mutation_rate:
-            individual["speed"] += np.random.uniform(-0.1, 0.1)
-            individual["speed"] = np.clip(individual["speed"], 1.0, 3.0)
+            individual["speed"] += np.random.uniform(-1, 1)
+            individual["speed"] = np.clip(individual["speed"], 3.0, 30.0)
         if np.random.rand() < self.mutation_rate:
-            individual["acceleration"] += np.random.uniform(-0.01, 0.01)
-            individual["acceleration"] = np.clip(individual["acceleration"], 0.05, 0.2)
+            individual["acceleration"] += np.random.uniform(-0.02, 0.02)
+            individual["acceleration"] = np.clip(individual["acceleration"], 0.05, 0.35)
         if np.random.rand() < self.mutation_rate:
-            individual["braking_force"] += np.random.uniform(-0.02, 0.02)
-            individual["braking_force"] = np.clip(individual["braking_force"], 0.1, 0.3)
+            individual["braking_force"] += np.random.uniform(-0.03, 0.03)
+            individual["braking_force"] = np.clip(individual["braking_force"], 0.1, 0.5)
         if np.random.rand() < self.mutation_rate:
             individual["turn_angle"] += np.random.uniform(-2, 2)
             individual["turn_angle"] = np.clip(individual["turn_angle"], 10, 45)
